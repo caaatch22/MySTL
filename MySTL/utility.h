@@ -17,9 +17,9 @@ move(T&& arg) noexcept {
 }
 
 //forward
-template <class T>
+template <typename T>
 T&& forward(typename std::remove_reference<T>::type& arg) noexcept {
-    return static_cast<T &&>(arg);
+    return static_cast<T&&>(arg);
 }
 
 template <typename T>

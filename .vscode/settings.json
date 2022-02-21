@@ -21,6 +21,8 @@
         "xlocmon": "cpp",
         "xlocnum": "cpp",
         "xloctime": "cpp",
-        "cstring": "cpp"
+        "cstring": "cpp",
+        "array": "cpp",
+        "map": "cpp"
     }
 }

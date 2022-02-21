@@ -20,14 +20,14 @@ public:
     using iterator               = value_type*;
     using const_iterator         = const value_type*;
     using pointer                = value_type*;
-    using const_pointer          = const value_type*
+    using const_pointer          = const value_type*;
     using reference              = value_type&;
     using const_reference        = const value_type&;
     using size_type              = size_t;
     using difference_type        = ptrdiff_t;
 
-    using reverse_iterator       = reverse_iterator<iterator>;
-    using const_reverse_iterator = reverse_iterator<const_iterator>;
+    using reverse_iterator       = MYSTL::reverse_iterator<iterator>;
+    using const_reverse_iterator = MYSTL::reverse_iterator<const_iterator>;
     
 
 protected:
@@ -71,11 +71,7 @@ public:
     vector(const vector& rhs) { range_initialize(rhs.begin(), rhs.end()); }
     template <typename InputIterator>
     vector(InputIterator first, InputIterator last) { range_initialize(first, last); }
-    vector& operator=(const vector& rhs) {
-        if(this != &rhs) 
-            assign(rhs.begin(), rhs.end());
-        return *this;
-    }
+    vector& operator=(const vector& rhs);
     vector(vector&& rhs) noexcept;
     vector& operator=(vector&& rhs) noexcept;
 
@@ -152,7 +148,7 @@ public:
     void clear() { erase(begin(), end()); }
 
     //resize
-    void resize(size_type new_size) {return resize(new_size, value_type{}; }
+    void resize(size_type new_size) { resize(new_size, value_type{}); }
     void resize(size_type new_size, const value_type& value);
 
     void swap(vector& rhs) noexcept {
@@ -182,11 +178,39 @@ void vector<T, Alloc>::range_initialize(Iterator first, Iterator last) {
 
 template <typename T, typename Alloc>
 void vector<T, Alloc>::insert_aux(iterator position, const value_type& value) {
-    if(finish != end_of_storage) {
+    if (finish != end_of_storage) {
         construct(finish, *(finish - 1));
         ++finish;
+        T value_copy = value;
+        copy_backward(position, finish - 2, finish - 1);
+        *position = value_copy;
+    }
+    else {
+        const size_type old_size = size();
+        const size_type len = old_size != 0 ? 2 * old_size : 1;
+        iterator new_start = data_allocator::allocate(len);
+        iterator new_finish = new_start;
+        
+        try {
+            new_finish = uninitialized_copy(start, position, new_start);
+            construct(new_finish, value);
+            ++new_finish;
+            new_finish = uninitialized_copy(position, finish, new_finish);
+        }
+        catch(...) {
+            data_allocator::destroy(new_start, new_finish);
+            data_allocator::deallocate(new_start, len);
+            throw;
+        }
+
+        data_allocator::destroy(begin(), end());
+        data_allocator::deallocate(begin(), size());
+        start = new_start;
+        finish = new_finish;
+        end_of_storage = new_start + len;
     }
 }
+
 
 template <typename T, typename Alloc>
 template <typename InputIterator>
@@ -277,6 +301,18 @@ vector<T, Alloc>::emplace(const_iterator position, Args&&... args) {
 
 }
 
+template <typename T, typename Alloc>
+template <typename... Args>
+void vector<T, Alloc>::emplace_back(Args&&... args) {
+    if(finish < end_of_storage) {
+        data_allocator::construct(MYSTL::addressof(*finish), MYSTL::forward<Args>(args)...);
+        ++finish;
+    }
+    else {
+        
+    }
+}
+
 
 template <typename T, typename Alloc>
 void vector<T, Alloc>::push_back(const value_type& value) {
@@ -288,29 +324,20 @@ void vector<T, Alloc>::push_back(const value_type& value) {
         insert_aux(end(), value);
 }
 
+template <typename T, typename Alloc>
+void vector<T, Alloc>::push_back(value_type&& value) {
+    emplace_back(MYSTL::move(value));
+}
+
+
 
 
 /*********************************************************************/
 // ctors:
 template <typename T, typename Alloc >
 vector<T, Alloc>& vector<T, Alloc>::operator=(const vector& rhs) {
-    if(this != &rhs) {
-        const auto count = rhs.size();
-        if(count > capacity()) {
-            vector result(rhs.begin(), rhs.end());
-            swap(result);
-        }
-        else if(count <= size()) {
-            auto itr = std::copy(rhs.begin(), rhs.end(), begin());
-            //to impl...
-            finish = start + count;
-        }
-        else {
-            std::copy(rhs.begin(), rhs.begin() + size(), start);
-            MYSTL::uninitialized_copy(rhs.begin() + size(), rhs.end(), finish);
-            end_of_storage = finish = start + count;
-        }
-    }
+    if(this != &rhs)
+        assign(rhs.begin(), rhs.end());
     return *this;
 }
 

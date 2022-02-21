@@ -5,6 +5,8 @@
 #include <new>
 #include "type_traits.h"
 #include "iterator.h"
+#include "utility.h"
+
 
 namespace MYSTL
 {
@@ -49,7 +51,7 @@ inline void destroy(Tp* ptr) {
     __destroy_aux(ptr, std::is_trivially_destructible<Tp>{});
 }
 
-template <typename T, typename ForwardIterator>
+template <typename ForwardIterator>
 inline void destroy(ForwardIterator first, ForwardIterator last) {
     using value_type = typename iterator_traits<ForwardIterator>::value_type;
     __destroy_n_aux(first, last, std::is_trivially_destructible<value_type>{});

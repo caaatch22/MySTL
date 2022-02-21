@@ -11,7 +11,11 @@ using std::endl;
 
 int main() {
 
-    
-
+    vector<int> vec;
+    vec.push_back(3);
+    cout << vec.size() << endl;
+    for(auto i: vec) {
+        cout << i << endl;
+    }
     return 0;
 }
