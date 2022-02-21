@@ -55,8 +55,8 @@ struct iterator_traits<const T*> {
 template <typename Iterator>
 typename iterator_traits<Iterator>::iterator_category
 iterator_category(const Iterator&) {
-    using Category = typename iterator_traits<Iterator>::iterator_category;
-    return Category{};
+    using category = typename iterator_traits<Iterator>::iterator_category;
+    return category{};
 }
 
 

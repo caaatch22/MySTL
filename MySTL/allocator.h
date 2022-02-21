@@ -130,10 +130,9 @@ public:
     //     return size_type(UINT_MAX / sizeof(T));
     // }
 
-    //void construct(T *ptr);
-    //void construct(pointer ptr, const T &value);
-    //void construct(pointer ptr, T &&value);
-
+    static void construct(pointer ptr) {
+        MYSTL::construct(ptr);
+    }
     template <typename... Args>
     static void construct(pointer ptr, Args&&... args) {
         MYSTL::construct(ptr, MYSTL::forward<Args>(args)...);
@@ -141,6 +140,10 @@ public:
 
     static void destroy(pointer ptr) {
         MYSTL::destroy(ptr);
+    }
+
+    static void destroy(pointer first, pointer last) {
+        MYSTL::destroy(first, last);
     }
     //void destroy(pointer first, pointer last);
 };

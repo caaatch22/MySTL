@@ -95,6 +95,66 @@ copy(InputIterator first, InputIterator last, OutputIterator dest) {
 }
 
 ////////////////////////////////////////////////////////////////////////
+// copy_backward
+//[first, last) -> [result - (last - first), result)
+
+// bidirectional_iterator_tag version
+template <typename BidirectionalIterator1, typename BidirectionalIterator2>
+BidirectionalIterator2 
+__copy_backward_aux(BidirectionalIterator1 first, BidirectionalIterator1 last,
+                    BidirectionalIterator2 result, MYSTL::bidirectional_iterator_tag)
+{
+    while (first != last)
+        *--result = *--last;
+    return result;
+}
+
+//random_access_iterator_tag version
+template <typename BidirectionalIterator1, typename BidirectionalIterator2>
+BidirectionalIterator2 
+__copy_backward_aux(BidirectionalIterator1 first, BidirectionalIterator1 last,
+                    BidirectionalIterator2 result, MYSTL::random_access_iterator_tag)
+{
+    auto n = last - first;
+    while(n -- )
+        *--result = *--last;
+    return result;
+}
+
+template <typename BidirectionalIterator1, typename BidirectionalIterator2>
+BidirectionalIterator2 
+__copy_backward(BidirectionalIterator1 first, BidirectionalIterator1 last,
+                BidirectionalIterator2 result)
+{
+  return __copy_backward_aux(first, last, result,
+                            iterator_category(first));
+}
+
+//  trivially_copy_assignable version
+template <typename T, typename U>
+typename std::enable_if<
+    std::is_same<typename std::remove_const<T>::type, U>::value &&
+    std::is_trivially_copy_assignable<U>::value,
+    U*>::type
+__copy_backward(T* first, T* last, U* result)
+{
+    const auto n = static_cast<size_t>(last - first);
+    if (n != 0) {
+        result -= n;
+        std::memmove(result, first, n * sizeof(U));
+    }
+    return result;
+}
+
+template <typename BidirectionalIterator1, typename BidirectionalIterator2>
+BidirectionalIterator2 
+copy_backward(BidirectionalIterator1 first, BidirectionalIterator1 last, 
+              BidirectionalIterator2 result)
+{
+    return __copy_backward(first, last, result);
+}
+
+////////////////////////////////////////////////////////////////////////
 //copy_n
 
 

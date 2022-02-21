@@ -16,22 +16,22 @@ namespace MYSTL
 template <typename InputIterator, typename ForwardItererator>
 inline ForwardItererator 
 __uninitialized_copy_aux(InputIterator first, InputIterator last, 
-                          ForwardItererator result, std::true_type) {
-  return MYSTL::copy(first, last, result);
+                          ForwardItererator dest, std::true_type) {
+  return MYSTL::copy(first, last, dest);
 }
 
 template <typename InputIterator, typename ForwardItererator>
 inline ForwardItererator
 __uninitialized_copy_aux(InputIterator first, InputIterator last, 
-                          ForwardItererator result, std::false_type) {
-    auto cur = result;
+                          ForwardItererator dest, std::false_type) {
+    auto cur = dest;
     try {
         for (; first != last; ++first, ++cur) {
             MYSTL::construct(&*cur, *first);
         }
     }
     catch (...) {
-        for (; result != cur; --cur)
+        for (; dest != cur; --cur)
             MYSTL::destroy(&*cur);
     }
     return cur;
@@ -40,10 +40,10 @@ __uninitialized_copy_aux(InputIterator first, InputIterator last,
 
 template <typename InputIterator, typename ForwardItererator>
 inline ForwardItererator
-uninitialized_copy(InputIterator first, InputIterator last, ForwardItererator result) {
+uninitialized_copy(InputIterator first, InputIterator last, ForwardItererator dest) {
     using value_type = typename iterator_traits<ForwardItererator>::value_type;
     using trivially_copy_assignable = std::is_trivially_copy_assignable<value_type>;
-    return MYSTL::__uninitialized_copy_aux(first, last, result,
+    return MYSTL::__uninitialized_copy_aux(first, last, dest,
                                            trivially_copy_assignable{});
 }
 

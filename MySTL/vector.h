@@ -9,15 +9,18 @@
 namespace MYSTL
 {
 
-template <typename T, typename Alloc = allocator<T>>
+
+template <typename T, typename Alloc = MYSTL::allocator<T>>
 class vector {
 public:
-    using data_allocator         = allocator<T>;
+    using data_allocator         = MYSTL::allocator<T>;
     using iterator_category      = MYSTL::random_access_iterator_tag;
 
     using value_type             = T;
     using iterator               = value_type*;
     using const_iterator         = const value_type*;
+    using pointer                = value_type*;
+    using const_pointer          = const value_type*
     using reference              = value_type&;
     using const_reference        = const value_type&;
     using size_type              = size_t;
@@ -32,7 +35,9 @@ protected:
     iterator finish;
     iterator end_of_storage;
 
-    void insert_aux(iterator position, const T& value);
+
+protected:
+
     void allocate(size_type init_size) {
         try {
             start = data_allocator::allocate(init_size);
@@ -43,33 +48,41 @@ protected:
             throw;
         }
     }
-    void deallocate() {
+    void deallocate_all() {
         if(start) data_allocator::deallocate(start, end_of_storage - start);
     }
+
     void fill_initialize(size_type n, const value_type& value);
 
     template <typename Iterator>
     void range_initialize(Iterator first, Iterator last);
 
+    void insert_aux(iterator position, const T& value);
+    template <typename InputIterator>
+    void assign_aux(InputIterator first, InputIterator last, MYSTL::input_iterator_tag);
+    template <typename ForwardIterator>
+    void assign_aux(ForwardIterator first, ForwardIterator last, MYSTL::forward_iterator_tag);
 
 public:
     
     //ctors:
     vector() : start(0), finish(0), end_of_storage(0) {}
     vector(size_type n, const value_type& value) { fill_initialize(n, value); }
-    vector(const vector &rhs) { range_initialize(rhs.begin(), rhs.end()); }
+    vector(const vector& rhs) { range_initialize(rhs.begin(), rhs.end()); }
     template <typename InputIterator>
     vector(InputIterator first, InputIterator last) { range_initialize(first, last); }
     vector& operator=(const vector& rhs) {
-        if(this != &rhs) {
+        if(this != &rhs) 
             assign(rhs.begin(), rhs.end());
-        }
         return *this;
     }
-    vector(vector &&rhs) noexcept;
+    vector(vector&& rhs) noexcept;
     vector& operator=(vector&& rhs) noexcept;
 
-    ~vector();
+    ~vector() {
+        data_allocator::destroy(start, finish);
+        deallocate_all();
+    }
 
     //iterators
     iterator        begin()       { return start; }
@@ -95,37 +108,22 @@ public:
     bool            empty() const { return begin() == end(); }
 
     //element access:
-    reference       at(size_type n) { return (*this)[n]; }
-    const_reference at(size_type n) const { return (*this)[n]; }
-    reference       front() { return *begin(); }
-    const_reference front() const { return *begin(); }
-    reference       back() { return *(end() - 1); }
-    const_reference back() const { return *(end() - 1); }
-    reference       operator[](size_type n) { return *(begin() + n); }
+    reference       at(size_type n)               { return (*this)[n]; }
+    const_reference at(size_type n)         const { return (*this)[n]; }
+    reference       front()                       { return *begin(); }
+    const_reference front()                 const { return *begin(); }
+    reference       back()                        { return *(end() - 1); }
+    const_reference back()                  const { return *(end() - 1); }
+    reference       operator[](size_type n)       { return *(begin() + n); }
     const_reference operator[](size_type n) const { return *(begin() + n); }
-    
+    pointer         data()                        { return start; }
+    const_pointer   data()                  const { return start; }
+
     //modifiers:
     template <typename Iterator>
-    void assign(Iterator first, Iterator last) {
-        size_type n = static_cast<size_type>(last - first);
+    void assign(Iterator first, Iterator last);
+    void assign(size_type n, const value_type &value);
 
-    }
-
-    void assign(size_type n, const value_type& value) {
-        if(n > capacity()) {
-            vector tmp(n, value);
-            swap(tmp);
-        }
-        else if(n > size()) {
-            MYSTL::fill(begin(), end(), value);
-            finish = MYSTL::uninitialized_fill_n(end(), n - size(), value);
-        }
-        else {
-            erase(MYSTL::fill_n(begin(), n, value), end());
-        }
-    }
-
-    
     template <typename... Args>
     iterator emplace(const_iterator position, Args&&... args);
 
@@ -139,7 +137,9 @@ public:
     iterator insert(const_iterator position, const T& x);
     iterator insert(const_iterator position) { return insert(position, T()); }
     iterator insert(const_iterator position, size_type n, value_type& value);
-    
+    template <typename InputIterator>
+    void     insert(const_pointer position, InputIterator first, InputIterator last);
+
     iterator erase(const_iterator position) {
         if(position + 1 != end())
             MYSTL::copy(position + 1, finish, position);
@@ -167,11 +167,18 @@ public:
 /***********************************************************************/
 //heplers
 
-template <typename T, typename Alloc> template <typename Iterator>
-void vector<T, Alloc>::range_initialize(Iterator first, Iterator last) {
-    
+template <typename T, typename Alloc>
+void vector<T, Alloc>::fill_initialize(size_type n, const value_type& value) {
+    allocate(n);
+    MYSTL::uninitialized_fill_n(begin(), n, value);
 }
 
+template <typename T, typename Alloc> template <typename Iterator>
+void vector<T, Alloc>::range_initialize(Iterator first, Iterator last) {
+    const size_type init_size = static_cast<size_type>(last - first);
+    allocate(init_size);
+    MYSTL::uninitialized_copy(first, last, start);
+}
 
 template <typename T, typename Alloc>
 void vector<T, Alloc>::insert_aux(iterator position, const value_type& value) {
@@ -182,12 +189,67 @@ void vector<T, Alloc>::insert_aux(iterator position, const value_type& value) {
 }
 
 template <typename T, typename Alloc>
-void vector<T, Alloc>::fill_initialize(size_type n, const value_type& value) {
-    allocate(n);
-    MYSTL::uninitialized_fill_n(begin(), n, value);
+template <typename InputIterator>
+void vector<T, Alloc>::assign_aux(InputIterator first, InputIterator last, MYSTL::input_iterator_tag) {
+    auto cur = start;
+    while(first != last && cur != finish)
+        *cur++ = *first++;
+    if (first == last)
+        erase(cur, finish);
+    else
+        insert(finish, first, last);
+}
+
+template <typename T, typename Alloc>
+template <typename ForwardIterator>
+void vector<T, Alloc>::assign_aux(ForwardIterator first, ForwardIterator last, MYSTL::forward_iterator_tag) {
+    const size_type len = MYSTL::distance(first, last);
+    if(len > capacity()) {
+        vector tmp(first, last);
+        swap(tmp);
+    }
+    else if(len > size()) {
+        auto mid = first;
+        MYSTL::advance(mid, size());
+        MYSTL::copy(first, mid, start);
+        auto new_finish = MYSTL::uninitialized_copy(mid, last, finish);
+        finish = new_finish;
+    }
+    else {
+        auto new_finish = MYSTL::copy(first, last, start);
+        data_allocator::destroy(new_finish, finish);
+        finish = new_finish;
+    }
 }
 
 /******************************************************************************/
+
+//modifiers:
+template <typename T, typename Alloc>
+template <typename Iterator>
+void vector<T, Alloc>::
+assign(Iterator first, Iterator last) {
+    assign_aux(first, last, MYSTL::iterator_category(first));
+}
+
+template <typename T, typename Alloc>
+void vector<T, Alloc>::
+assign(size_type n, const value_type& value) {
+    if(n > capacity()) {
+        vector tmp(n, value);
+        swap(tmp);
+    }
+    else if(n > size()) {
+        MYSTL::fill(begin(), end(), value);
+        finish = MYSTL::uninitialized_fill_n(end(), n - size(), value);
+    }
+    else {
+        erase(MYSTL::fill_n(begin(), n, value), end());
+    }
+}
+
+    
+
 
 template <typename T, typename Alloc>
 template <typename... Args>
@@ -195,72 +257,26 @@ typename vector<T, Alloc>::iterator
 vector<T, Alloc>::emplace(const_iterator position, Args&&... args) {
     auto xpos = const_cast<iterator>(position);
     const auto n = xpos - cbegin();
-    
+
     if(finish != end_of_storage) {
         if(xpos == cend()) {
-            data_allocator::construct(addressof(finish), forward<Args>(args)...);
+            data_allocator::construct(MYSTL::addressof(*finish), forward<Args>(args)...);
             ++finish;
         }
         else {
-            data_allocator::construct(addressof())
+            auto new_finish = finish;
+            data_allocator::construct(MYSTL::addressof(*finish));
+            ++new_finish;
+            MYSTL::copy_backward(xpos, finish, new_finish);
+            *xpos = value_type(MYSTL::forward<Args>(args)...);
         }
+    }
+    else {
+
     }
 
 }
 
-template<typename _Alloc>
-    void
-    vector<bool, _Alloc>::
-    _M_insert_aux(iterator __position, bool __x)
-    {
-      if (this->_M_impl._M_finish._M_p != this->_M_impl._M_end_addr())
-	{
-	  std::copy_backward(__position, this->_M_impl._M_finish, 
-			     this->_M_impl._M_finish + 1);
-	  *__position = __x;
-	  ++this->_M_impl._M_finish;
-	}
-      else
-	{
-	  const size_type __len =
-	    _M_check_len(size_type(1), "vector<bool>::_M_insert_aux");
-	  _Bit_pointer __q = this->_M_allocate(__len);
-	  iterator __start(std::__addressof(*__q), 0);
-	  iterator __i = _M_copy_aligned(begin(), __position, __start);
-	  *__i++ = __x;
-	  iterator __finish = std::copy(__position, end(), __i);
-	  this->_M_deallocate();
-	  this->_M_impl._M_end_of_storage = __q + _S_nword(__len);
-	  this->_M_impl._M_start = __start;
-	  this->_M_impl._M_finish = __finish;
-	}
-    }
-
-
-{
-	const auto __n = __position - cbegin();
-	if (this->_M_impl._M_finish != this->_M_impl._M_end_of_storage)
-	  if (__position == cend())
-	    {
-	      _GLIBCXX_ASAN_ANNOTATE_GROW(1);
-	      _Alloc_traits::construct(this->_M_impl, this->_M_impl._M_finish,
-				       std::forward<_Args>(__args)...);
-	      ++this->_M_impl._M_finish;
-	      _GLIBCXX_ASAN_ANNOTATE_GREW(1);
-	    }
-	  else
-	    {
-	      // We need to construct a temporary because something in __args...
-	      // could alias one of the elements of the container and so we
-	      // need to use it before _M_insert_aux moves elements around.
-	      _Temporary_value __tmp(this, std::forward<_Args>(__args)...);
-	      _M_insert_aux(begin() + __n, std::move(__tmp._M_val()));
-	    }
-	else
-	  _M_realloc_insert(begin() + __n, std::forward<_Args>(__args)...);
-
-	return iterator(this->_M_impl._M_start + __n);
-      }
 
 template <typename T, typename Alloc>
 void vector<T, Alloc>::push_back(const value_type& value) {
