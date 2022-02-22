@@ -1,6 +1,7 @@
 #ifndef VECTOR_H_
 #define VECTOR_H_
 
+#include <initializer_list>
 #include "memory.h"
 #include "utility.h"
 #include "iterator.h"
@@ -48,9 +49,6 @@ protected:
             throw;
         }
     }
-    void deallocate_all() {
-        if(start) data_allocator::deallocate(start, end_of_storage - start);
-    }
 
     void fill_initialize(size_type n, const value_type& value);
 
@@ -74,10 +72,11 @@ public:
     vector& operator=(const vector& rhs);
     vector(vector&& rhs) noexcept;
     vector& operator=(vector&& rhs) noexcept;
+    vector(std::initializer_list<value_type> ilist) { range_initialize(ilist.begin(), ilist.end()); }
 
     ~vector() {
         data_allocator::destroy(start, finish);
-        deallocate_all();
+        data_allocator::deallocate(start, end_of_storage - start);
     }
 
     //iterators
@@ -101,7 +100,23 @@ public:
     { return static_cast<size_type>(end() - begin()); }
     size_type       capacity() const 
     {  return static_cast<size_type>(end_of_storage - begin()); }
-    bool            empty() const { return begin() == end(); }
+    bool            empty() const { return begin() == end() && start != nullptr; }
+    void shrink_to_fit() {
+        if(end() < capacity()) {
+            const auto new_size = size();
+            auto new_start = data_allocator::allocate(new_size);
+            try {
+                MYSTL::uninitialized_move(start, finish, new_start);
+            }
+            catch(...) {
+                data_allocator::deallocate(new_start, new_size);
+                throw;
+            }
+            data_allocator::deallocate(start, end_of_storage - start);
+            start = new_start;
+            finish = end_of_storage = start + new_size;
+        }
+    }
 
     //element access:
     reference       at(size_type n)               { return (*this)[n]; }
@@ -130,7 +145,8 @@ public:
     void push_back(value_type&& value);
     void pop_back();
 
-    iterator insert(const_iterator position, const T& x);
+    iterator insert(const_iterator position, const value_type& value);
+    iterator insert(const_iterator position, value_type&& value) { return emplace(position, MYSTL::move(value)); }
     iterator insert(const_iterator position) { return insert(position, T()); }
     iterator insert(const_iterator position, size_type n, value_type& value);
     template <typename InputIterator>
@@ -150,6 +166,7 @@ public:
     //resize
     void resize(size_type new_size) { resize(new_size, value_type{}); }
     void resize(size_type new_size, const value_type& value);
+
 
     void swap(vector& rhs) noexcept {
         if(this != &rhs) {
@@ -295,8 +312,24 @@ vector<T, Alloc>::emplace(const_iterator position, Args&&... args) {
             *xpos = value_type(MYSTL::forward<Args>(args)...);
         }
     }
-    else {
-
+    else { //need to reallocate:
+        const auto new_size = 2 * size();
+        auto new_start = data_allocator::allocate(new_size);
+        auto new_finish = new_start;
+        try {
+            new_finish = MYSTL::uninitialized_move(start, position, new_start);
+            data_allocator::construct(MYSTL::addressof(*new_finish), MYSTL::forward<Args>(args)...);
+            ++new_finish;
+            new_finish = MYSTL::uninitialized_move(position, finish, new_finish);
+        }
+        catch(...) {
+            data_allocator::deallocate(new_start, new_size);
+            throw;
+        }
+        data_allocator::destroy(start, finish);
+        data_allocator::deallocate(start, end_of_storage);
+        start = new_start;
+        end_of_storage = finish = new_finish;
     }
 
 }
@@ -304,13 +337,7 @@ vector<T, Alloc>::emplace(const_iterator position, Args&&... args) {
 template <typename T, typename Alloc>
 template <typename... Args>
 void vector<T, Alloc>::emplace_back(Args&&... args) {
-    if(finish < end_of_storage) {
-        data_allocator::construct(MYSTL::addressof(*finish), MYSTL::forward<Args>(args)...);
-        ++finish;
-    }
-    else {
-        
-    }
+    emplace(end(), (args)...);
 }
 
 
@@ -329,6 +356,26 @@ void vector<T, Alloc>::push_back(value_type&& value) {
     emplace_back(MYSTL::move(value));
 }
 
+template <typename T, typename Alloc>
+void vector<T, Alloc>::pop_back() {
+    if(!empty()) {
+        --finish;
+        destroy(finish);
+    }
+}
+
+template <typename T, typename Alloc>
+typename vector<T, Alloc>::iterator
+vector<T, Alloc>::insert(const_iterator position, const value_type& value) {
+    const auto n = position - begin();
+    if(finish != end_of_storage && position == end()) {
+        construct(finish, value);
+        ++finish;
+    }
+    else
+        insert_aux(position, value);
+    return begin() + n;
+}
 
 
 
@@ -341,18 +388,25 @@ vector<T, Alloc>& vector<T, Alloc>::operator=(const vector& rhs) {
     return *this;
 }
 
+template <typename T, typename Alloc >
+vector<T, Alloc>::vector(vector&& rhs) 
+                    :start(rhs.start), 
+                    finish(rhs.finish), 
+                    end_of_storage(rhs.end_of_storge)
+{
+    rhs.start = rhs.finish = rhs.end_of_storage = nullptr;
+}
+
+
 
 template <typename T, typename Alloc >
-vector<T, Alloc>& vector<T, Alloc>::operator=(vector&& rhs) noexcept
-{
-    //to impl...
-    //(start, finish, end_of_storage - start);
+vector<T, Alloc>& vector<T, Alloc>::operator=(vector&& rhs) noexcept {
+    data_allocator::destroy(start, finish);
+    data_allocator::deallocate(start, end_of_storage - start);
     start = rhs.start;
     finish = rhs.finish;
     end_of_storage = rhs.end_of_storage;
-    rhs.start = nullptr;
-    rhs.finish = nullptr;
-    rhs.end_of_storage = nullptr;
+    rhs.start = rhs.finish = rhs.end_of_storage = nullptr;
     return *this;
 }
 
