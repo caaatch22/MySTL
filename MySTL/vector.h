@@ -388,8 +388,8 @@ vector<T, Alloc>& vector<T, Alloc>::operator=(const vector& rhs) {
     return *this;
 }
 
-template <typename T, typename Alloc >
-vector<T, Alloc>::vector(vector&& rhs) 
+template <typename T, typename Alloc>
+vector<T, Alloc>::vector(vector&& rhs) noexcept
                     :start(rhs.start), 
                     finish(rhs.finish), 
                     end_of_storage(rhs.end_of_storge)
@@ -409,6 +409,44 @@ vector<T, Alloc>& vector<T, Alloc>::operator=(vector&& rhs) noexcept {
     rhs.start = rhs.finish = rhs.end_of_storage = nullptr;
     return *this;
 }
+
+/******************************************************************************/
+template <typename T, typename Alloc>
+void swap(vector<T, Alloc>& lhs, vector<T, Alloc>& rhs) noexcept  {
+    lhs.swap(rhs);
+}
+
+template <typename T, typename Alloc>
+bool operator==(const vector<T, Alloc>& lhs, const vector<T, Alloc>& rhs) {
+    return lhs.size() == rhs.size() && MYSTL::equal(lhs.begin(), lhs.end(), rhs.begin());
+}
+
+template <typename T, typename Alloc>
+bool operator!=(const vector<T, Alloc>& lhs, const vector<T, Alloc>& rhs) {
+    return !(lhs == rhs);
+}
+
+template <class T>
+bool operator<(const vector<T>& lhs, const vector<T>& rhs) {
+  return MYSTL::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), lhs.end());
+}
+
+template <typename T>
+bool operator>(const vector<T>& lhs, const vector<T>& rhs) {
+    return rhs < lhs;
+}
+
+template <typename T>
+bool operator<=(const vector<T>& lhs, const vector<T>& rhs) {
+    return !(rhs < lhs);
+}
+
+template <typename T>
+bool operator>=(const vector<T>& lhs, const vector<T>& rhs) {
+    return !(lhs < rhs);
+}
+
+
 
 
 } //end of namespace MYSTL
