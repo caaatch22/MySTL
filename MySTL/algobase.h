@@ -313,6 +313,47 @@ bool equal(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, C
     return true;
 }
 
+/*****************************************************************************************/
+// lexicographical_compare
+template <typename InputIterator1, typename InputIterator2>
+bool lexicographical_compare(InputIterator1 first1, InputIterator1 last1,
+                             InputIterator2 first2, InputIterator2 last2)
+{
+    for (; first1 != last1 && first2 != last2; ++first1, ++first2) {
+        if (*first1 < *first2)
+            return true;
+        if (*first2 < *first1)
+            return false;
+    }
+    return first1 == last1 && first2 != last2;
+}
+
+// overload for comp
+template <typename InputIterator1, typename InputIterator2, typename Compare>
+bool lexicographical_compare(InputIterator1 first1, InputIterator1 last1,
+                             InputIterator2 first2, InputIterator2 last2, Compare comp)
+{
+    for (;first1 != last1 && first2 != last2; ++first1, ++first2) {
+        if (comp(*first1, *first2))
+            return true;
+        if (comp(*first2, *first1))
+            return false;
+    }
+    return first1 == last1 && first2 != last2;
+}
+
+//  const unsigned char* 
+bool lexicographical_compare(const unsigned char* first1,
+                             const unsigned char* last1,
+                             const unsigned char* first2,
+                             const unsigned char* last2)
+{
+    const auto len1 = last1 - first1;
+    const auto len2 = last2 - first2;
+    const auto result = std::memcmp(first1, first2, MYSTL::min(len1, len2));
+    return result != 0 ? result < 0 : len1 < len2;
+}
+
 
 } // end of namespace MYSTL
 
