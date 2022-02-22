@@ -52,22 +52,22 @@ uninitialized_copy(InputIterator first, InputIterator last, ForwardItererator de
 template <typename InputIterator, typename Size, typename ForwardItererator>
 inline ForwardItererator 
 __uninitialized_copy_aux_n(InputIterator first, Size n, 
-                            ForwardItererator result, std::true_type) {
-    return MYSTL::copy_n(first, n, result).second;
+                            ForwardItererator dest, std::true_type) {
+    return MYSTL::copy_n(first, n, dest).second;
 }
 
 template <typename InputIterator, typename Size, typename ForwardItererator>
 inline ForwardItererator
 __uninitialized_copy_aux_n(InputIterator first, Size n, 
-                            ForwardItererator result, std::false_type) {
-    auto cur = result;
+                            ForwardItererator dest, std::false_type) {
+    auto cur = dest;
     try {
         for (; n > 0; --n, ++cur, ++first) {
             MYSTL::construct(&*cur, *first);
         }
     }
     catch (...) {
-        for (; result != cur; --cur)
+        for (; dest != cur; --cur)
             MYSTL::destroy(&*cur);
     }
     return cur;
@@ -75,10 +75,10 @@ __uninitialized_copy_aux_n(InputIterator first, Size n,
 
 template <typename InputIterator, typename Size, typename ForwardItererator>
 inline ForwardItererator 
-uninitialized_copy_n(InputIterator first, Size n, ForwardItererator result) {
+uninitialized_copy_n(InputIterator first, Size n, ForwardItererator dest) {
     using value_type = typename iterator_traits<InputIterator>::value_type;
     using trivially_copy_assignable = std::is_trivially_copy_assignable<value_type>;
-    return MYSTL::__uninitialized_copy_aux_n(first, n, result,
+    return MYSTL::__uninitialized_copy_aux_n(first, n, dest,
                                              trivially_copy_assignable{});
 }
 
@@ -153,7 +153,7 @@ uninitialized_fill_n(ForwardItererator first, Size n, const T& value) {
 
 /*****************************************************************************************/
 // uninitialized_move
-// 把[first, last)上的内容移动到以 result 为起始处的空间，返回移动结束的位置
+// 把[first, last)上的内容移动到以 dest 为起始处的空间，返回移动结束的位置
 /*****************************************************************************************/
 template <typename InputIterator, typename ForwardItererator>
 inline ForwardItererator 
@@ -189,22 +189,22 @@ uninitialized_move(InputIterator first, InputIterator last, ForwardItererator de
 // uninitialized_move_n
 template <typename InputIterator, typename Size, typename ForwardItererator>
 inline ForwardItererator 
-__uninitialized_move_aux_n(InputIterator first, Size n, ForwardItererator result, std::true_type) {
-    return MYSTL::move(first, first + n, result);
+__uninitialized_move_aux_n(InputIterator first, Size n, ForwardItererator dest, std::true_type) {
+    return MYSTL::move(first, first + n, dest);
 }
 
 template <typename InputIterator, typename Size, typename ForwardItererator>
 inline ForwardItererator
-__uninitialized_move_aux_n(InputIterator first, Size n, ForwardItererator result, std::false_type) {
-    auto cur = result;
+__uninitialized_move_aux_n(InputIterator first, Size n, ForwardItererator dest, std::false_type) {
+    auto cur = dest;
     try {
         for (; n > 0; --n, ++first, ++cur) {
             MYSTL::construct(&*cur, MYSTL::move(*first));
         }
     }
     catch (...) {
-        for (; result != cur; ++result)
-            MYSTL::destroy(&*result);
+        for (; dest != cur; ++dest)
+            MYSTL::destroy(&*dest);
         throw;
     }
     return cur;
@@ -212,10 +212,10 @@ __uninitialized_move_aux_n(InputIterator first, Size n, ForwardItererator result
 
 template <typename InputIterator, typename Size, typename ForwardItererator>
 inline ForwardItererator 
-uninitialized_move_n(InputIterator first, Size n, ForwardItererator result) {
+uninitialized_move_n(InputIterator first, Size n, ForwardItererator dest) {
     using value_type = typename iterator_traits<InputIterator>::value_type;
     using trivially_move_assignable = typename std::is_trivially_move_assignable<value_type>;
-    return MYSTL::__uninitialized_move_aux_n(first, n, result,
+    return MYSTL::__uninitialized_move_aux_n(first, n, dest,
                                              trivially_move_assignable{});
 }
 
