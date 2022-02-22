@@ -196,7 +196,7 @@ public:
 
     list &operator=(list&& rhs) {
         clear();
-        aplice(end(), rhs);
+        splice(end(), rhs);
         return *this;
     }
     
