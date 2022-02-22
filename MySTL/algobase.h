@@ -53,9 +53,9 @@ template <typename InputIterator, typename OutputIterator>
 inline OutputIterator 
 __copy (InputIterator first, InputIterator last, OutputIterator dest, 
         MYSTL::input_iterator_tag) {
-    for (; first != last; ++first, ++dest) {
-        *dest = *first;
-    }
+    
+    while(first != last)
+        *++dest = *++first;
     return dest;
 }
 
@@ -63,9 +63,9 @@ template <typename InputIterator, typename OutputIterator>
 inline OutputIterator 
 __copy (InputIterator first, InputIterator last, OutputIterator dest, 
         MYSTL::random_access_iterator_tag) {
-    for (auto n = last - first; n > 0; --n, ++first, ++dest)  {
-        *dest = *first;
-    }
+    auto n = last - first;
+    while(n --)
+        *++dest = *++first;
     return dest;
 }
 
@@ -160,38 +160,88 @@ copy_backward(BidirectionalIterator1 first, BidirectionalIterator1 last,
 
 template <typename InputIterator, typename Size, typename OutputIterator>
 MYSTL::pair<InputIterator, OutputIterator>
-__copy_n(InputIterator first, Size n, OutputIterator result, MYSTL::input_iterator_tag)
+__copy_n(InputIterator first, Size n, OutputIterator dest, MYSTL::input_iterator_tag)
 {
-    for (; n > 0; --n, ++first, ++result) {
-        *result = *first;
-    }
-    return MYSTL::pair<InputIterator, OutputIterator>(first, result);
+    while(n --)
+        *++dest = *++first;
+    return MYSTL::pair<InputIterator, OutputIterator>(first, dest);
 }
 
 template <typename RandomIterator, typename Size, typename OutputIterator>
 MYSTL::pair<RandomIterator, OutputIterator>
-__copy_n(RandomIterator first, Size n, OutputIterator result, 
+__copy_n(RandomIterator first, Size n, OutputIterator dest, 
                  MYSTL::random_access_iterator_tag)
 {
     auto last = first + n;
-    return MYSTL::pair<RandomIterator, OutputIterator>(last, MYSTL::copy(first, last, result));
+    return MYSTL::pair<RandomIterator, OutputIterator>(last, MYSTL::copy(first, last, dest));
 }
 
 template <typename InputIterator, typename Size, typename OutputIterator>
 MYSTL::pair<InputIterator, OutputIterator> 
-copy_n(InputIterator first, Size n, OutputIterator result) {
-    return __copy_n(first, n, result, iterator_category(first));
+copy_n(InputIterator first, Size n, OutputIterator dest) {
+    return __copy_n(first, n, dest, iterator_category(first));
 }
 
+/////////////////////////////////////////////////////////////////////////
+//move
+
+// input_iterator_tag -version
+template <typename InputIterator, typename OutputIterator>
+OutputIterator 
+__move (InputIterator first, InputIterator last, OutputIterator dest,
+        MYSTL::input_iterator_tag)
+{
+    for (; first != last; ++first, ++dest) {
+        *dest = MYSTL::move(*first);
+    }
+    return dest;
+}
+
+template <typename InputIterator, typename OutputIterator>
+OutputIterator 
+__move (InputIterator first, InputIterator last, OutputIterator dest,
+        MYSTL::random_access_iterator_tag)
+{
+    for (auto n = last - first; n > 0; --n, ++first, ++dest) {
+        *dest = MYSTL::move(*first);
+    }
+    return dest;
+}
+
+template <typename InputIterator, typename OutputIterator>
+OutputIterator 
+__move_d (InputIterator first, InputIterator last, OutputIterator dest)
+{
+    return __move(first, last, dest, iterator_category(first));
+}
+
+//  trivially_copy_assignable -version
+template <typename T, typename U>
+typename std::enable_if<
+  std::is_same<typename std::remove_const<T>::type, U>::value &&
+  std::is_trivially_move_assignable<U>::value,
+  U*>::type
+__move_d(T* first, T* last, U* dest)
+{
+    const size_t n = static_cast<size_t>(last - first);
+    if (n != 0)
+        std::memmove(dest, first, n * sizeof(U));
+    return dest + n;
+}
+
+template <typename InputIterator, typename OutputIterator>
+OutputIterator move(InputIterator first, InputIterator last, OutputIterator dest)
+{
+    return __move_d(first, last, dest);
+}
 
 /////////////////////////////////////////////////////////////////////////
 
 template <typename OutputIterator, typename Size, typename T>
 OutputIterator __fill_n(OutputIterator first, Size n, const T& value)
 {
-    for (; n > 0; --n, ++first) {
-        *first = value;
-    }
+    while(n --) 
+        *++first = value;
     return first;
 }
 
@@ -221,9 +271,8 @@ template <typename ForwardIterator, typename T>
 void __fill(ForwardIterator first, ForwardIterator last, const T& value,
               MYSTL::forward_iterator_tag)
 {
-    for (; first != last; ++first) {
-        *first = value;
-    }
+    while(first != last) 
+        *++first = value;
 }
 
 template <typename RandomIterator, typename T>
