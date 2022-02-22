@@ -288,6 +288,31 @@ void fill(ForwardIterator first, ForwardIterator last, const T& value)
     __fill(first, last, value, iterator_category(first));
 }
 
+//////////////////////////////////////////////////////////////////////
+// equal
+
+template <typename InputIterator1, typename InputIterator2>
+bool equal(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2)
+{
+    for (; first1 != last1; ++first1, ++first2) {
+        if (*first1 != *first2)
+            return false;
+    }
+    return true;
+}
+
+// overload comp
+template <typename InputIterator1, typename InputIterator2, typename Compare>
+bool equal(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, Compare comp)
+{
+    for (; first1 != last1; ++first1, ++first2)
+    {
+        if (!comp(*first1, *first2))
+            return false;
+    }
+    return true;
+}
+
 
 } // end of namespace MYSTL
 
