@@ -1,6 +1,11 @@
 #ifndef ALGO_H
 #define ALGO_H
 
+#include <ctime>
+#include <cstddef>
+
+
+
 namespace MYSTL
 {
 
@@ -83,8 +88,66 @@ find_if_not(InputIterator first, InputIterator last, UnaryPredicate unary_pred) 
     return first;
 }
 
+//search
+template <typename ForwardIterator1, typename ForwardIterator2>
+ForwardIterator1
+search(ForwardIterator1 first1, ForwardIterator1 last1,
+       ForwardIterator2 first2, ForwardIterator2 last2)
+{
+    auto dis1 = MYSTL::distance(first1, last1);
+    auto dis2 = MYSTL::distance(first2, last2);
+    if (dis1 < dis2)  return last1;
+    auto current1 = first1, current2 = first2;
+
+    while (current2 != last2) {
+        if (*current1 == *current2) {
+            ++current1;
+            ++current2;
+        }
+        else {
+            if (dis1 == dis2) {
+                return last1;
+            }
+            else {
+                current1 = ++first1;
+                current2 = first2;
+                --dis1;
+            }
+        }
+    }
+    return first1;
+}
 
 
+template <typename ForwardIterator1, typename ForwardIterator2, 
+                                     typename Compared>
+ForwardIterator1
+search(ForwardIterator1 first1, ForwardIterator1 last1,
+       ForwardIterator2 first2, ForwardIterator2 last2, Compared comp)
+{
+    auto dis1 = MYSTL::distance(first1, last1);
+    auto dis2 = MYSTL::distance(first2, last2);
+    if (dis1 < dis2)   return last1;
+    auto current1 = first1;
+    auto current2 = first2;
+    while (current2 != last2) {
+        if (comp(*current1, *current2)) {
+            ++current1;
+            ++current2;
+        }
+        else {
+            if (dis1 == dis2) {
+                return last1; 
+            }
+            else {
+                current1 = ++first1;
+                current2 = first2;
+                --dis1;
+            }
+        }
+    }
+    return first1;
+}
 
 } // namespace MYSTL
 
