@@ -157,31 +157,31 @@ uninitialized_fill_n(ForwardItererator first, Size n, const T& value) {
 /*****************************************************************************************/
 template <typename InputIterator, typename ForwardItererator>
 inline ForwardItererator 
-__uninitialized_move_aux(InputIterator first, InputIterator last, ForwardItererator result, std::true_type) {
-    return MYSTL::move(first, last, result);
+__uninitialized_move_aux(InputIterator first, InputIterator last, ForwardItererator dest, std::true_type) {
+    return MYSTL::move(first, last, dest);
 }
 
 template <typename InputIterator, typename ForwardItererator>
 inline ForwardItererator 
-__uninitialized_move_aux(InputIterator first, InputIterator last, ForwardItererator result, std::false_type) {
-    auto cur = result;
+__uninitialized_move_aux(InputIterator first, InputIterator last, ForwardItererator dest, std::false_type) {
+    auto cur = dest;
     try {
         for (; first != last; ++first, ++cur) {
             MYSTL::construct(&*cur, MYSTL::move(*first));
         }
     }
     catch (...) {
-        MYSTL::destroy(result, cur);
+        MYSTL::destroy(dest, cur);
     }
     return cur;
 }
 
 template <typename InputIterator, typename ForwardItererator>
 inline ForwardItererator 
-uninitialized_move(InputIterator first, InputIterator last, ForwardItererator result) {
+uninitialized_move(InputIterator first, InputIterator last, ForwardItererator dest) {
     using value_type = typename iterator_traits<InputIterator>::value_type;
     using trivially_move_assignable = typename std::is_trivially_move_assignable<value_type>;
-    return MYSTL::__uninitialized_move_aux(first, last, result,
+    return MYSTL::__uninitialized_move_aux(first, last, dest,
                                         trivially_move_assignable{});
 }
 
