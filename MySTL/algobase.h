@@ -72,7 +72,7 @@ __copy (InputIterator first, InputIterator last, OutputIterator dest,
 template <typename InputIterator, typename OutputIterator>
 inline OutputIterator 
 __copy_d (InputIterator first, InputIterator last, OutputIterator dest) {
-    return __copy(first, last, dest, iterator_catrgory(first));
+    return __copy(first, last, dest, iterator_category(first));
 }
 
 // 为 trivially_copy_assignable 类型提供特化版本
