@@ -6,6 +6,7 @@
 #include "utility.h"
 #include "iterator.h"
 #include "allocator.h"
+#include <iterator>
 
 namespace MYSTL
 {
@@ -18,10 +19,10 @@ public:
     using iterator_category      = MYSTL::random_access_iterator_tag;
 
     using value_type             = T;
-    using iterator               = value_type*;
-    using const_iterator         = const value_type*;
-    using pointer                = value_type*;
-    using const_pointer          = const value_type*;
+    using iterator               = T*;
+    using const_iterator         = const T*;
+    using pointer                = T*;
+    using const_pointer          = const T*;
     using reference              = value_type&;
     using const_reference        = const value_type&;
     using size_type              = size_t;
@@ -67,8 +68,22 @@ public:
     vector() : start(0), finish(0), end_of_storage(0) {}
     vector(size_type n, const value_type& value) { fill_initialize(n, value); }
     vector(const vector& rhs) { range_initialize(rhs.begin(), rhs.end()); }
-    template <typename InputIterator>
+
+// typename
+//       enable_if<is_convertible<typename
+// 		iterator_traits<_InIter>::iterator_category,
+// 			       input_iterator_tag>::value>::type;
+
+    // template <typename InputIterator, 
+    // typename = typename std::enable_if<std::is_convertible<typename
+    // iterator_traits<InputIterator>::iterator_category, MYSTL::input_iterator_tag>::value>::type>
+    template <typename InputIterator, typename = typename
+      std::enable_if<std::is_convertible<typename
+		std::iterator_traits<InputIterator>::iterator_category,
+			       std::input_iterator_tag>::value>::type>
+    //std::_RequireInputIter<InputIterator>>
     vector(InputIterator first, InputIterator last) { range_initialize(first, last); }
+    
     vector& operator=(const vector& rhs);
     vector(vector&& rhs) noexcept;
     vector& operator=(vector&& rhs) noexcept;
@@ -161,7 +176,7 @@ public:
     }
     iterator erase(const_iterator first, const_iterator last);
     iterator erase(iterator first, iterator last);
-    void clear() { erase(begin(), end()); }
+    void     clear() { erase(begin(), end()); }
 
     //resize
     void resize(size_type new_size) { resize(new_size, value_type{}); }
@@ -204,8 +219,8 @@ void vector<T, Alloc>::insert_aux(iterator position, const value_type& value) {
     }
     else {
         const size_type old_size = size();
-        const size_type len = old_size != 0 ? 2 * old_size : 1;
-        iterator new_start = data_allocator::allocate(len);
+        const size_type new_size = old_size != 0 ? 2 * old_size : 1;
+        iterator new_start = data_allocator::allocate(new_size);
         iterator new_finish = new_start;
         
         try {
@@ -216,7 +231,7 @@ void vector<T, Alloc>::insert_aux(iterator position, const value_type& value) {
         }
         catch(...) {
             data_allocator::destroy(new_start, new_finish);
-            data_allocator::deallocate(new_start, len);
+            data_allocator::deallocate(new_start, new_size);
             throw;
         }
 
@@ -224,7 +239,7 @@ void vector<T, Alloc>::insert_aux(iterator position, const value_type& value) {
         data_allocator::deallocate(begin(), size());
         start = new_start;
         finish = new_finish;
-        end_of_storage = new_start + len;
+        end_of_storage = new_start + new_size;
     }
 }
 
@@ -296,11 +311,10 @@ template <typename T, typename Alloc>
 template <typename... Args>
 typename vector<T, Alloc>::iterator 
 vector<T, Alloc>::emplace(const_iterator position, Args&&... args) {
-    auto xpos = const_cast<iterator>(position);
-    const auto n = xpos - cbegin();
-
+    auto const_cast_pos = const_cast<iterator>(position);
+    const size_type n = position - cbegin();
     if(finish != end_of_storage) {
-        if(xpos == cend()) {
+        if(const_cast_pos == cend()) {
             data_allocator::construct(MYSTL::addressof(*finish), forward<Args>(args)...);
             ++finish;
         }
@@ -308,35 +322,39 @@ vector<T, Alloc>::emplace(const_iterator position, Args&&... args) {
             auto new_finish = finish;
             data_allocator::construct(MYSTL::addressof(*finish));
             ++new_finish;
-            MYSTL::copy_backward(xpos, finish, new_finish);
-            *xpos = value_type(MYSTL::forward<Args>(args)...);
+            MYSTL::copy_backward(const_cast_pos, finish, new_finish);
+            *const_cast_pos = value_type(MYSTL::forward<Args>(args)...);
         }
     }
     else { //need to reallocate:
-        const auto new_size = 2 * size();
+        const size_type old_size = size();
+        const size_type new_size = old_size != 0 ? 2 * old_size : 1;
+
         auto new_start = data_allocator::allocate(new_size);
         auto new_finish = new_start;
         try {
-            new_finish = MYSTL::uninitialized_move(start, position, new_start);
+            new_finish = MYSTL::uninitialized_move(start, const_cast_pos, new_start);
             data_allocator::construct(MYSTL::addressof(*new_finish), MYSTL::forward<Args>(args)...);
             ++new_finish;
-            new_finish = MYSTL::uninitialized_move(position, finish, new_finish);
+            new_finish = MYSTL::uninitialized_move(const_cast_pos, finish, new_finish);
         }
         catch(...) {
             data_allocator::deallocate(new_start, new_size);
             throw;
         }
         data_allocator::destroy(start, finish);
-        data_allocator::deallocate(start, end_of_storage);
+        data_allocator::deallocate(start, end_of_storage - start);
         start = new_start;
-        end_of_storage = finish = new_finish;
+        finish = new_finish;
+        end_of_storage = new_start + new_size;
     }
-
+    return start + n;
 }
 
 template <typename T, typename Alloc>
 template <typename... Args>
 void vector<T, Alloc>::emplace_back(Args&&... args) {
+
     emplace(end(), (args)...);
 }
 
@@ -392,7 +410,7 @@ template <typename T, typename Alloc>
 vector<T, Alloc>::vector(vector&& rhs) noexcept
                     :start(rhs.start), 
                     finish(rhs.finish), 
-                    end_of_storage(rhs.end_of_storge)
+                    end_of_storage(rhs.end_of_storage)
 {
     rhs.start = rhs.finish = rhs.end_of_storage = nullptr;
 }
