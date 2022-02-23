@@ -19,10 +19,10 @@ public:
     using iterator_category      = MYSTL::random_access_iterator_tag;
 
     using value_type             = T;
-    using iterator               = T*;
-    using const_iterator         = const T*;
-    using pointer                = T*;
-    using const_pointer          = const T*;
+    using iterator               = value_type*;
+    using const_iterator         = const value_type*;
+    using pointer                = value_type*;
+    using const_pointer          = const value_type*;
     using reference              = value_type&;
     using const_reference        = const value_type&;
     using size_type              = size_t;
@@ -30,7 +30,7 @@ public:
 
     using reverse_iterator       = MYSTL::reverse_iterator<iterator>;
     using const_reverse_iterator = MYSTL::reverse_iterator<const_iterator>;
-    
+
 
 protected:
     iterator start;
@@ -63,16 +63,12 @@ protected:
     void assign_aux(ForwardIterator first, ForwardIterator last, MYSTL::forward_iterator_tag);
 
 public:
-    
+
     //ctors:
     vector() : start(0), finish(0), end_of_storage(0) {}
     vector(size_type n, const value_type& value) { fill_initialize(n, value); }
+    vector(size_type n) { fill_initialize(n, value_type()); }
     vector(const vector& rhs) { range_initialize(rhs.begin(), rhs.end()); }
-
-// typename
-//       enable_if<is_convertible<typename
-// 		iterator_traits<_InIter>::iterator_category,
-// 			       input_iterator_tag>::value>::type;
 
     // template <typename InputIterator, 
     // typename = typename std::enable_if<std::is_convertible<typename
@@ -81,9 +77,8 @@ public:
       std::enable_if<std::is_convertible<typename
 		std::iterator_traits<InputIterator>::iterator_category,
 			       std::input_iterator_tag>::value>::type>
-    //std::_RequireInputIter<InputIterator>>
     vector(InputIterator first, InputIterator last) { range_initialize(first, last); }
-    
+
     vector& operator=(const vector& rhs);
     vector(vector&& rhs) noexcept;
     vector& operator=(vector&& rhs) noexcept;
@@ -111,12 +106,10 @@ public:
     const_reverse_iterator crend()   const { return rend(); }
 
     //capacity
-    size_type       size() const
-    { return static_cast<size_type>(end() - begin()); }
-    size_type       capacity() const 
-    {  return static_cast<size_type>(end_of_storage - begin()); }
-    bool            empty() const { return begin() == end() && start != nullptr; }
-    void shrink_to_fit() {
+    size_type   size()     const  { return static_cast<size_type>(end() - begin()); }
+    size_type   capacity() const  { return static_cast<size_type>(end_of_storage - begin()); }
+    bool        empty()    const  { return begin() == end() && start != nullptr; }
+    void        shrink_to_fit() {
         if(size() < capacity()) {
             const auto new_size = size();
             auto new_start = data_allocator::allocate(new_size);
@@ -222,7 +215,7 @@ void vector<T, Alloc>::insert_aux(iterator position, const value_type& value) {
         const size_type new_size = old_size != 0 ? 2 * old_size : 1;
         iterator new_start = data_allocator::allocate(new_size);
         iterator new_finish = new_start;
-        
+
         try {
             new_finish = uninitialized_copy(start, position, new_start);
             construct(new_finish, value);
@@ -304,7 +297,7 @@ assign(size_type n, const value_type& value) {
     }
 }
 
-    
+
 
 
 template <typename T, typename Alloc>
@@ -354,7 +347,6 @@ vector<T, Alloc>::emplace(const_iterator position, Args&&... args) {
 template <typename T, typename Alloc>
 template <typename... Args>
 void vector<T, Alloc>::emplace_back(Args&&... args) {
-
     emplace(end(), (args)...);
 }
 
