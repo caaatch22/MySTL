@@ -117,7 +117,7 @@ public:
     {  return static_cast<size_type>(end_of_storage - begin()); }
     bool            empty() const { return begin() == end() && start != nullptr; }
     void shrink_to_fit() {
-        if(end() < capacity()) {
+        if(size() < capacity()) {
             const auto new_size = size();
             auto new_start = data_allocator::allocate(new_size);
             try {
