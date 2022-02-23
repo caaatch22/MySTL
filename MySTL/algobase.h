@@ -55,7 +55,7 @@ __copy (InputIterator first, InputIterator last, OutputIterator dest,
         MYSTL::input_iterator_tag) {
     
     while(first != last)
-        *++dest = *++first;
+        *dest++ = *first++;
     return dest;
 }
 
@@ -65,7 +65,7 @@ __copy (InputIterator first, InputIterator last, OutputIterator dest,
         MYSTL::random_access_iterator_tag) {
     auto n = last - first;
     while(n --)
-        *++dest = *++first;
+        *dest++ = *first++;
     return dest;
 }
 
@@ -105,7 +105,7 @@ __copy_backward_aux(BidirectionalIterator1 first, BidirectionalIterator1 last,
                     BidirectionalIterator2 result, MYSTL::bidirectional_iterator_tag)
 {
     while (first != last)
-        *--result = *--last;
+        *result-- = *last--;
     return result;
 }
 
@@ -117,7 +117,7 @@ __copy_backward_aux(BidirectionalIterator1 first, BidirectionalIterator1 last,
 {
     auto n = last - first;
     while(n -- )
-        *--result = *--last;
+        *result-- = *last--;
     return result;
 }
 
@@ -163,7 +163,7 @@ MYSTL::pair<InputIterator, OutputIterator>
 __copy_n(InputIterator first, Size n, OutputIterator dest, MYSTL::input_iterator_tag)
 {
     while(n --)
-        *++dest = *++first;
+        *dest++ = *first++;
     return MYSTL::pair<InputIterator, OutputIterator>(first, dest);
 }
 
@@ -241,7 +241,7 @@ template <typename OutputIterator, typename Size, typename T>
 OutputIterator __fill_n(OutputIterator first, Size n, const T& value)
 {
     while(n --) 
-        *++first = value;
+        *first++ = value;
     return first;
 }
 
@@ -272,7 +272,7 @@ void __fill(ForwardIterator first, ForwardIterator last, const T& value,
               MYSTL::forward_iterator_tag)
 {
     while(first != last) 
-        *++first = value;
+        *first++ = value;
 }
 
 template <typename RandomIterator, typename T>
