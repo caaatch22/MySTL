@@ -173,7 +173,18 @@ public:
 
     //resize
     void resize(size_type new_size) { resize(new_size, value_type{}); }
-    void resize(size_type new_size, const value_type& value);
+    void resize(size_type new_size, const value_type& value) {
+        if(new_size > capacity()) {
+            vector tmp(size_type, value);
+            swap(tmp);
+        }
+        else if(new_size > size()) {
+            insert(end(), new_size - size(), value);
+        }
+        else {
+            erase(begin() + new_size, end());
+        }
+    }
 
 
     void swap(vector& rhs) noexcept {
