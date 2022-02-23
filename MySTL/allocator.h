@@ -106,7 +106,8 @@ public:
     using const_reference   = const T&;
     using size_type         = size_t;
     using difference_type   = ptrdiff_t;
-
+    using iterator          = T*;
+    using const_iterator    = const T*;
     template <typename U>
     struct rebind{
         using other = allocator<U>; 
