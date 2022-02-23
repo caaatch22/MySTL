@@ -121,7 +121,7 @@ inline void _advance(RandomAccessIterator& i, Distance n,
 
 template <typename InputIterator, typename Distance>
 inline void advance(InputIterator& i, Distance n) {
-    _advance(i, n, iterator_catrgory(i));
+    _advance(i, n, iterator_category(i));
 }
 
 
