@@ -1,6 +1,8 @@
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
+[Bb]in
 
 # Visual Studio cache/options directory
 .vs/
