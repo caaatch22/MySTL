@@ -48,7 +48,9 @@ int main() {
 
     cout << "vec1.size() = " << vec1.size() << endl;
     cout << "vec1.capacaty() = " << vec1.capacity() << endl;
-
+    vec1.shrink_to_fit();
+    cout << "vec1.size() = " << vec1.size() << endl;
+    cout << "vec1.capacaty() = " << vec1.capacity() << endl;
     vec4.assign(vec1.begin(), vec1.end());
     cout << "vec4" << endl;
     printVec(vec4);
@@ -56,6 +58,11 @@ int main() {
     cout << "vec4.capacaty() = " << vec4.capacity() << endl;
     vec4.push_back(3);
     cout << vec4.capacity() << endl;
+
+
+    /*********************const vector test*****************************/
+    const vector<int> cvec1 = {3, 4, 5, 6};
+
 
     return 0;
 }

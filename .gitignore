@@ -1,0 +1,14 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+
+# Visual Studio cache/options directory
+.vs/
+
+# Visual Studio Code
+#.vscode/
+
+# C++ Executables
+*.exe
+*.out
+*.app
