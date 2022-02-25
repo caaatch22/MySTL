@@ -4,10 +4,11 @@
 
 containers:
 - list.h
+- vector.h (almost)
 
 iterator:
 - iterator.h
-- type_traits.h
+- type_traits.h (use <type_traits>)
 
 allocator:
 - allocator.h
@@ -16,7 +17,8 @@ allocator:
 - uninitialized.h
 
 algorithm:
-
+- algo.h (half)
+- algobase.h (half)
 
 
 others:
