@@ -59,9 +59,9 @@ __copy (InputIterator first, InputIterator last, OutputIterator dest,
     return dest;
 }
 
-template <typename InputIterator, typename OutputIterator>
+template <typename RandomAccessIterator, typename OutputIterator>
 inline OutputIterator 
-__copy (InputIterator first, InputIterator last, OutputIterator dest, 
+__copy (RandomAccessIterator first, RandomAccessIterator last, OutputIterator dest, 
         MYSTL::random_access_iterator_tag) {
     auto n = last - first;
     while(n --)
@@ -99,34 +99,34 @@ copy(InputIterator first, InputIterator last, OutputIterator dest) {
 //[first, last) -> [result - (last - first), result)
 
 // bidirectional_iterator_tag version
-template <typename BidirectionalIterator1, typename BidirectionalIterator2>
-BidirectionalIterator2 
-__copy_backward_aux(BidirectionalIterator1 first, BidirectionalIterator1 last,
-                    BidirectionalIterator2 result, MYSTL::bidirectional_iterator_tag)
+template <typename BidirectionalIterator, typename OutputIterator>
+inline OutputIterator 
+__copy_backward_aux(BidirectionalIterator first, BidirectionalIterator last,
+                    OutputIterator dest_back, MYSTL::bidirectional_iterator_tag)
 {
     while (first != last)
-        *result-- = *last--;
-    return result;
+        *--dest_back = *--last;
+    return dest_back;
 }
 
 //random_access_iterator_tag version
-template <typename BidirectionalIterator1, typename BidirectionalIterator2>
-BidirectionalIterator2 
-__copy_backward_aux(BidirectionalIterator1 first, BidirectionalIterator1 last,
-                    BidirectionalIterator2 result, MYSTL::random_access_iterator_tag)
+template <typename RandomAccessIterator, typename OutputIterator>
+inline OutputIterator 
+__copy_backward_aux(RandomAccessIterator first, RandomAccessIterator last,
+                    OutputIterator dest_back, MYSTL::random_access_iterator_tag)
 {
     auto n = last - first;
     while(n -- )
-        *result-- = *last--;
-    return result;
+        *--dest_back = *--last;
+    return dest_back;
 }
 
-template <typename BidirectionalIterator1, typename BidirectionalIterator2>
-BidirectionalIterator2 
-__copy_backward(BidirectionalIterator1 first, BidirectionalIterator1 last,
-                BidirectionalIterator2 result)
+template <typename InputIterator, typename OutputIterator>
+OutputIterator 
+__copy_backward(InputIterator first, InputIterator last,
+                OutputIterator dest_back)
 {
-  return __copy_backward_aux(first, last, result,
+  return __copy_backward_aux(first, last, dest_back,
                             iterator_category(first));
 }
 
@@ -136,22 +136,22 @@ typename std::enable_if<
     std::is_same<typename std::remove_const<T>::type, U>::value &&
     std::is_trivially_copy_assignable<U>::value,
     U*>::type
-__copy_backward(T* first, T* last, U* result)
+__copy_backward(T* first, T* last, U* dest_back)
 {
     const auto n = static_cast<size_t>(last - first);
     if (n != 0) {
-        result -= n;
-        std::memmove(result, first, n * sizeof(U));
+        dest_back -= n;
+        std::memmove(dest_back, first, n * sizeof(U));
     }
-    return result;
+    return dest_back;
 }
 
-template <typename BidirectionalIterator1, typename BidirectionalIterator2>
-BidirectionalIterator2 
-copy_backward(BidirectionalIterator1 first, BidirectionalIterator1 last, 
-              BidirectionalIterator2 result)
+template <typename InputIterator, typename OutputIterator>
+OutputIterator 
+copy_backward(InputIterator first, InputIterator last, 
+              OutputIterator dest_back)
 {
-    return __copy_backward(first, last, result);
+    return __copy_backward(first, last, dest_back);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -167,13 +167,13 @@ __copy_n(InputIterator first, Size n, OutputIterator dest, MYSTL::input_iterator
     return MYSTL::pair<InputIterator, OutputIterator>(first, dest);
 }
 
-template <typename RandomIterator, typename Size, typename OutputIterator>
-MYSTL::pair<RandomIterator, OutputIterator>
-__copy_n(RandomIterator first, Size n, OutputIterator dest, 
+template <typename RandomAccessIterator, typename Size, typename OutputIterator>
+MYSTL::pair<RandomAccessIterator, OutputIterator>
+__copy_n(RandomAccessIterator first, Size n, OutputIterator dest, 
                  MYSTL::random_access_iterator_tag)
 {
     auto last = first + n;
-    return MYSTL::pair<RandomIterator, OutputIterator>(last, MYSTL::copy(first, last, dest));
+    return MYSTL::pair<RandomAccessIterator, OutputIterator>(last, MYSTL::copy(first, last, dest));
 }
 
 template <typename InputIterator, typename Size, typename OutputIterator>
@@ -187,7 +187,7 @@ copy_n(InputIterator first, Size n, OutputIterator dest) {
 
 // input_iterator_tag -version
 template <typename InputIterator, typename OutputIterator>
-OutputIterator 
+inline OutputIterator 
 __move (InputIterator first, InputIterator last, OutputIterator dest,
         MYSTL::input_iterator_tag)
 {
@@ -197,9 +197,9 @@ __move (InputIterator first, InputIterator last, OutputIterator dest,
     return dest;
 }
 
-template <typename InputIterator, typename OutputIterator>
-OutputIterator 
-__move (InputIterator first, InputIterator last, OutputIterator dest,
+template <typename RandomAccessIterator, typename OutputIterator>
+inline OutputIterator 
+__move (RandomAccessIterator first, RandomAccessIterator last, OutputIterator dest,
         MYSTL::random_access_iterator_tag)
 {
     for (auto n = last - first; n > 0; --n, ++first, ++dest) {
@@ -209,13 +209,13 @@ __move (InputIterator first, InputIterator last, OutputIterator dest,
 }
 
 template <typename InputIterator, typename OutputIterator>
-OutputIterator 
+inline OutputIterator 
 __move_d (InputIterator first, InputIterator last, OutputIterator dest)
 {
     return __move(first, last, dest, iterator_category(first));
 }
 
-//  trivially_copy_assignable -version
+//  trivially_move_assignable -version
 template <typename T, typename U>
 typename std::enable_if<
   std::is_same<typename std::remove_const<T>::type, U>::value &&
@@ -230,10 +230,70 @@ __move_d(T* first, T* last, U* dest)
 }
 
 template <typename InputIterator, typename OutputIterator>
-OutputIterator move(InputIterator first, InputIterator last, OutputIterator dest)
-{
+OutputIterator 
+move(InputIterator first, InputIterator last, OutputIterator dest) {
     return __move_d(first, last, dest);
 }
+
+/////////////////////////////////////////////////////////////////////////
+// move_backward
+template <typename BidirectionalIterator, typename OutputIterator>
+inline OutputIterator
+__move_backward_aux(BidirectionalIterator first, BidirectionalIterator last,
+                    OutputIterator dest_back, MYSTL::bidirectional_iterator_tag)
+{
+    while(first != last) 
+        *--dest_back = MYSTL::move(*--last);
+    return dest_back;
+}
+
+template <typename RandomAccessIterator, typename OutputIterator>
+inline OutputIterator
+__move_backward_aux(RandomAccessIterator first, RandomAccessIterator last,
+                    OutputIterator dest_back, MYSTL::random_access_iterator_tag)
+{
+    auto n = last - first;
+    while(n -- ) {
+        *--dest_back = MYSTL::move(*--last);
+    }
+    return dest_back;
+}
+
+
+template <typename InputIterator, typename OutputIterator>
+inline OutputIterator
+__move_backward(InputIterator first, InputIterator last, 
+                        OutputIterator dest_back)
+{
+    return __move_backward_aux(first, last, dest_back,
+                                     iterator_category(first));
+}
+
+// trivially_move_assignable 
+template <class Tp, class Up>
+typename std::enable_if<
+  std::is_same<typename std::remove_const<Tp>::type, Up>::value &&
+  std::is_trivially_move_assignable<Up>::value,
+  Up*>::type
+__move_backward(Tp* first, Tp* last, Up* dest_back)
+{
+    const size_t n = static_cast<size_t>(last - first);
+    if (n != 0) {
+        dest_back -= n;
+        std::memmove(dest_back, first, n * sizeof(Up));
+    }
+    return dest_back;
+}
+
+template <typename InputIterator, typename OutputIterator>
+inline OutputIterator
+move_backward(InputIterator first, InputIterator last, 
+                        OutputIterator dest_back)
+{
+    return __move_backward(first, last, dest_back);
+}
+
+
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -275,8 +335,8 @@ void __fill(ForwardIterator first, ForwardIterator last, const T& value,
         *first++ = value;
 }
 
-template <typename RandomIterator, typename T>
-void __fill(RandomIterator first, RandomIterator last, const T& value,
+template <typename RandomAccessIterator, typename T>
+void __fill(RandomAccessIterator first, RandomAccessIterator last, const T& value,
               MYSTL::random_access_iterator_tag)
 {
     fill_n(first, last - first, value);
