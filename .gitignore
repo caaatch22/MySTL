@@ -6,7 +6,7 @@
 .vs/
 
 # Visual Studio Code
-#.vscode/
+.vscode/
 
 # C++ Executables
 *.exe
