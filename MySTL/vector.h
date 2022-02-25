@@ -139,8 +139,11 @@ public:
     const_pointer   data()                  const { return start; }
 
     //modifiers:
-    template <typename Iterator>
-    void assign(Iterator first, Iterator last);
+    template <typename InputIterator, typename = typename
+      std::enable_if<std::is_convertible<typename
+		std::iterator_traits<InputIterator>::iterator_category,
+			       std::input_iterator_tag>::value>::type>
+    void assign(InputIterator first, InputIterator last);
     void assign(size_type n, const value_type &value);
 
     template <typename... Args>
@@ -156,8 +159,12 @@ public:
     iterator insert(const_iterator position, const value_type& value);
     iterator insert(const_iterator position, value_type&& value) { return emplace(position, MYSTL::move(value)); }
     iterator insert(const_iterator position) { return insert(position, T()); }
-    iterator insert(const_iterator position, size_type n, value_type& value);
-    template <typename InputIterator>
+    iterator insert(const_iterator position, size_type n, const value_type& value);
+
+    template <typename InputIterator, typename = typename
+      std::enable_if<std::is_convertible<typename
+		std::iterator_traits<InputIterator>::iterator_category,
+			       std::input_iterator_tag>::value>::type>
     void     insert(const_pointer position, InputIterator first, InputIterator last);
 
     iterator erase(const_iterator position) {
@@ -175,7 +182,7 @@ public:
     void resize(size_type new_size) { resize(new_size, value_type{}); }
     void resize(size_type new_size, const value_type& value) {
         if(new_size > capacity()) {
-            vector tmp(size_type, value);
+            vector tmp(new_size, value);
             swap(tmp);
         }
         else if(new_size > size()) {
@@ -286,9 +293,9 @@ void vector<T, Alloc>::assign_aux(ForwardIterator first, ForwardIterator last, M
 
 //modifiers:
 template <typename T, typename Alloc>
-template <typename Iterator>
+template <typename InputIterator, typename>
 void vector<T, Alloc>::
-assign(Iterator first, Iterator last) {
+assign(InputIterator first, InputIterator last) {
     assign_aux(first, last, MYSTL::iterator_category(first));
 }
 
@@ -399,6 +406,96 @@ vector<T, Alloc>::insert(const_iterator position, const value_type& value) {
 }
 
 
+template <class T, class Alloc>
+typename vector<T, Alloc>::iterator 
+vector<T, Alloc>::insert(const_iterator position, size_type n, const value_type& value) {
+    if (n != 0) {
+        if (static_cast<size_type>(end_of_storage - finish) >= n) {
+            T value_copy(value);
+            const size_type elems_after = finish - position;
+            iterator old_finish = finish;
+            if (elems_after > n) {
+                finish = uninitialized_copy(finish - n, finish, finish);
+                move_backward(position, old_finish - n, old_finish);
+                uninitialized_fill_n(position, n, value_copy);
+            }
+            else {
+                finish = uninitialized_fill_n(finish, n - elems_after, value_copy);
+                finish = uninitialized_move(position, old_finish, finish);
+                uninitialized_fill_n(position, elems_after, value_copy);
+            }
+        }
+        else { //need to reallocate
+            const size_type old_size = size();        
+            const size_type len = old_size + max(old_size, n);
+            auto new_start = data_allocator::allocate(len);
+            auto new_finish = new_start;
+            try {
+                new_finish = uninitialized_move(start, position, new_start);
+                new_finish = uninitialized_fill_n(new_finish, n, value);
+                new_finish = uninitialized_move(position, finish, new_finish);
+            }
+            catch(...) {
+                destroy(new_start, new_finish);
+                data_allocator::deallocate(new_start, len);
+                throw;
+            }
+            data_allocator::destroy(start, finish);
+            data_allocator::deallocate(start, end_of_storage - start);
+            start = new_start;
+            finish= new_finish;
+            end_of_storage = new_start + len;
+        }
+    }
+
+}
+
+template <typename T, typename Alloc>
+template <typename InputIterator, typename>
+void vector<T, Alloc>::insert(const_pointer position, InputIterator first, InputIterator last) {
+    if (first == last)  return;
+    auto pos = static_cast<iterator>(position);
+    const auto n = MYSTL::distance(first, last);
+    if (end_of_storage - finish >= n) { 
+        const auto after_elems = finish - position;
+        auto old_finish = finish;
+        if (after_elems > n) {
+            finish = MYSTL::uninitialized_copy(finish - n, finish, finish);
+            MYSTL::move_backward(pos, old_finish - n, old_finish);
+            MYSTL::uninitialized_copy(first, last, pos);
+        }
+        else
+        {
+            auto mid = first;
+            MYSTL::advance(mid, after_elems);
+            finish = MYSTL::uninitialized_copy(mid, last, finish);
+            finish = MYSTL::uninitialized_move(pos, old_finish, finish);
+            MYSTL::uninitialized_copy(first, mid, pos);
+        }
+    }
+    else { // need to reallocate
+        const size_type old_size = size();  
+        const size_type len = old_size + max(old_size, n);
+        auto new_start = data_allocator::allocate(len);
+        auto new_finish = new_start;
+        try {
+            new_finish = MYSTL::uninitialized_move(start, pos, new_start);
+            new_finish = MYSTL::uninitialized_copy(first, last, new_finish);
+            new_finish = MYSTL::uninitialized_move(pos, finish, new_finish);
+        }
+        catch(...) {
+            destroy(new_start, new_finish);
+            data_allocator::deallocate(new_start, len);
+            throw;
+        }
+        data_allocator::destroy(start, finish);
+        data_allocator::deallocate(start, end_of_storage - start);
+        start = new_start;
+        finish = new_finish;
+        end_of_storage = start + len;
+    }
+}
+
 
 /*********************************************************************/
 // ctors:
@@ -447,26 +544,25 @@ bool operator!=(const vector<T, Alloc>& lhs, const vector<T, Alloc>& rhs) {
     return !(lhs == rhs);
 }
 
-template <class T>
-bool operator<(const vector<T>& lhs, const vector<T>& rhs) {
+template <typename T, typename Alloc>
+bool operator<(const vector<T, Alloc>& lhs, const vector<T, Alloc>& rhs) {
   return MYSTL::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), lhs.end());
 }
 
-template <typename T>
-bool operator>(const vector<T>& lhs, const vector<T>& rhs) {
+template <typename T, typename Alloc>
+bool operator>(const vector<T, Alloc>& lhs, const vector<T, Alloc>& rhs) {
     return rhs < lhs;
 }
 
-template <typename T>
-bool operator<=(const vector<T>& lhs, const vector<T>& rhs) {
+template <typename T, typename Alloc>
+bool operator<=(const vector<T, Alloc>& lhs, const vector<T, Alloc>& rhs) {
     return !(rhs < lhs);
 }
 
-template <typename T>
-bool operator>=(const vector<T>& lhs, const vector<T>& rhs) {
+template <typename T, typename Alloc>
+bool operator>=(const vector<T, Alloc>& lhs, const vector<T, Alloc>& rhs) {
     return !(lhs < rhs);
 }
-
 
 
 
