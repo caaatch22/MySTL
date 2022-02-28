@@ -143,10 +143,6 @@ adjacent_difference(InputIterator first, InputIterator last,
 
 
 
-
-
-
-
 } // namespace 
 
 #endif
