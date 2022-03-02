@@ -3,7 +3,7 @@
 ## finished:
 
 containers:
-- list.h
+- list.h (expect sort for list)
 - vector.h (almost)
 
 iterator:
@@ -13,7 +13,7 @@ iterator:
 allocator:
 - allocator.h
 - construct.h
-- memory.h
+- memory.h (basic impl of unique_ptr)
 - uninitialized.h
 
 algorithm:
