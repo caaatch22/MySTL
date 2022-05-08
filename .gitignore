@@ -14,3 +14,7 @@
 *.exe
 *.out
 *.app
+
+
+tmp.c
+tmp.cpp
